@@ -1,0 +1,288 @@
+{
+  "name": "My workflow 3",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "0bf42fec-eea8-4270-87c4-e4f1dc2afb40",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1UkopAGdowJZ246xMPp6QPf5T5gR3IAwIMqQWor0Slvc",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1147878350,
+          "mode": "list",
+          "cachedResultName": "swiggy_customer_data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1UkopAGdowJZ246xMPp6QPf5T5gR3IAwIMqQWor0Slvc/edit#gid=1147878350"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "e70179e4-54f5-48bb-807a-84c0c88828a6",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xSnZvMO5g475t5rH",
+          "name": "Google Sheets OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d6e63444-ab23-4baa-9595-127e4da54d73",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "PASSED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        624,
+        0
+      ],
+      "id": "efd03d2f-7792-44c4-93df-10e241c61588",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "sruthigoud.arkala@gmail.com",
+        "subject": "Swiggy Data - PASSED",
+        "message": "=<h2>✅ Swiggy Data Quality Check PASSED</h2>\n<p>All validations passed successfully.</p>\n<ul>\n  <li><b>Passed:</b> {{ $json.passed }}</li>\n  <li><b>Failed:</b> {{ $json.failed }}</li>\n  <li><b>Total Checks:</b> {{ $json.total }}</li>\n</ul>\n<p>Data is clean and ready to use.</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        -96
+      ],
+      "id": "3aef19b4-fe52-4d8c-8a3b-2c82cad40cf4",
+      "name": "Send a message",
+      "webhookId": "3f0dd59a-4bbd-44ed-bfed-293c53d5cb09",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aof0gBECXQRWttmf",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nlet passedCount = 0;\nlet failedCount = 0;\nlet failedChecks = [];\n\nfor (const item of $input.all()) {\n  const row = item.json;\n  \n  if (Number(row.age) >= 18 && Number(row.age) <= 60) passedCount++;\n  else { failedCount++; failedChecks.push(\"age out of range\"); }\n\n  if (Number(row.avg_order_value) >= 100 && Number(row.avg_order_value) <= 1500) passedCount++;\n  else { failedCount++; failedChecks.push(\"avg_order_value out of range\"); }\n\n  if (Number(row.churn) === 0 || Number(row.churn) === 1) passedCount++;\n  else { failedCount++; failedChecks.push(\"churn invalid\"); }\n\n  const validCities = [\"Bangalore\", \"Hyderabad\", \"Chennai\", \"Mumbai\"];\n  if (validCities.includes(row.city)) passedCount++;\n  else { failedCount++; failedChecks.push(\"invalid city: \" + row.city); }\n}\n\nconst pipelineStatus = failedCount === 0 ? \"PASSED\" : \"FAILED\";\n\nreturn [{\n  json: {\n    status: pipelineStatus,\n    passed: passedCount,\n    failed: failedCount,\n    total: passedCount + failedCount,\n    failed_checks: [...new Set(failedChecks)]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "9ee2ccef-6030-4ea3-830c-d9ee205b9129",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst data = items[0].json;\n\nconst failedList = data.failed_checks && data.failed_checks.length > 0 \n  ? data.failed_checks.join(\", \") \n  : \"Data ranges or city values are out of expected bounds\";\n\nconst prompt = `You are a data quality analyst. The Swiggy customer dataset failed validation. Write a short clear message to the sales team explaining what went wrong and what they should fix. Keep it under 100 words. Issues found: ${failedList}`;\n\nreturn [{ json: { prompt: prompt, passed: data.passed, failed: data.failed, total: data.total } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        96
+      ],
+      "id": "fb7081cd-3404-4675-a522-2364b98de99d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.prompt }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1056,
+        176
+      ],
+      "id": "04e0010e-8f4e-4d2f-a4d8-5cdb9fca13a7",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        992,
+        384
+      ],
+      "id": "db9be712-64b1-490d-9328-49c358db350c",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "xjRy12A0TR00OTjx",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "sruthigoud.arkala@gmail.com",
+        "subject": "❌ Swiggy Data - FAILED (AI Analysis)",
+        "message": "=<h2>❌ Swiggy Data Quality Check FAILED</h2> <p>{{ $json.text }}</p> <ul>   <li><b>Passed:</b> {{ $('Code in JavaScript1').item.json.passed }}</li>   <li><b>Failed:</b> {{ $('Code in JavaScript1').item.json.failed }}</li>   <li><b>Total:</b> {{ $('Code in JavaScript1').item.json.total }}</li> </ul>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1408,
+        176
+      ],
+      "id": "0bd11fd9-5cc7-44fa-99f7-67ea144201f8",
+      "name": "Send a message1",
+      "webhookId": "2463562a-e860-457d-a50a-7d3b522f762d",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "aof0gBECXQRWttmf",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Send a message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "92e79a8c-f6c0-4619-acb5-6113829f8066",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e3257c8aa018a5053aa73d623f67c89b299c02927f312e2023e6b0b91aa79ef6"
+  },
+  "nodeGroups": [],
+  "id": "ph8cvlffiVrVXIiJ",
+  "tags": []
+}
